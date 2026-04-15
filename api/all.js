@@ -10,6 +10,17 @@ async function fetchTable(tableName) {
   return res.json();
 }
 
+async function readBody(req) {
+  return new Promise((resolve) => {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', () => {
+      try { resolve(JSON.parse(body)); }
+      catch { resolve({}); }
+    });
+  });
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -18,7 +29,10 @@ module.exports = async function handler(req, res) {
 
   if (req.method === 'POST') {
     try {
-      const { prompt } = req.body;
+      const body = await readBody(req);
+      const prompt = body.prompt || '';
+      if (!prompt) return res.status(400).json({ error: 'No prompt provided' });
+
       const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -33,7 +47,9 @@ module.exports = async function handler(req, res) {
         })
       });
       const aiData = await aiRes.json();
-      return res.status(200).json({ text: aiData.content?.[0]?.text || 'Could not generate.' });
+      const text = aiData.content?.[0]?.text;
+      if (!text) return res.status(500).json({ error: 'No text in response', raw: aiData });
+      return res.status(200).json({ text });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
