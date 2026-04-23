@@ -1,16 +1,6 @@
 const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY;
 
-const ORG_PROFILE = `
-Organization: Austin AI Hub
-Type: 501(c)(3) nonprofit, founded 2025
-Location: Austin, Texas (also serves online nationwide)
-Mission: Make AI education accessible to everyone and apply AI for social good
-Members: 500+ including beginners, engineers, educators, healthcare workers, students, career changers
-Programs: AI For Everyone Workshop Series, AI After Hours networking, AI Innovation Challenge hackathons, AI for Social Good (anti-trafficking tools), Chai Chat Mentorship
-Best grant fits: AI/technology education, workforce development, community development, STEM education, social good/anti-trafficking, diversity in tech
-Typical grant size: $5,000 - $100,000
-Geographic focus: Austin TX, Greater Austin, Texas, nationwide (online programs)
-`;
+const ORG_PROFILE = `Austin AI Hub: 501c3 nonprofit, Austin TX, founded 2025. Mission: AI education for everyone and AI for social good. Programs: AI workshops for beginners, networking events, hackathons, anti-trafficking AI tools, mentorship. Best fits: AI/tech education, workforce development, community development, STEM, social good. Grant range: $5k-$100k.`;
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -36,36 +26,16 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'title or description required' });
     }
 
-    const prompt = `You are a grant fit evaluator for a nonprofit organization.
+    const prompt = `Rate this grant opportunity for: ${ORG_PROFILE}
 
-Here is the organization profile:
-${ORG_PROFILE}
+Grant: ${title || ''} by ${funder || 'Unknown'}
+${description || ''}
 
-Here is a grant opportunity to evaluate:
-Title: ${title || 'Unknown'}
-Funder: ${funder || 'Unknown'}
-Amount: ${amount || 'Unknown'}
-Deadline: ${deadline || 'Unknown'}
-Source: ${source || 'Unknown'}
-Description: ${description || 'No description provided'}
+Reply with ONLY this JSON (no other text):
+{"fit_score":8,"fit_reason":"One sentence why","focus_areas":["tag1","tag2"],"recommendation":"approve","key_requirements":"One sentence about eligibility"}`;
 
-Evaluate how well this grant fits the organization. Respond in JSON only with this exact structure:
-{
-  "fit_score": <number 1-10>,
-  "fit_reason": "<one sentence explaining the score>",
-  "focus_areas": ["<tag1>", "<tag2>"],
-  "recommendation": "approve" | "maybe" | "skip",
-  "key_requirements": "<any important eligibility notes in one sentence>"
-}
-
-Scoring guide:
-9-10: Perfect fit
-7-8: Strong fit
-5-6: Partial fit
-3-4: Weak fit
-1-2: No fit
-
-Respond with JSON only. No other text.`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
     const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -75,11 +45,13 @@ Respond with JSON only. No other text.`;
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 400,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 200,
         messages: [{ role: 'user', content: prompt }]
-      })
+      }),
+      signal: controller.signal
     });
+    clearTimeout(timeout);
 
     const aiData = await aiRes.json();
     const text = aiData.content?.[0]?.text || '{}';
@@ -89,7 +61,7 @@ Respond with JSON only. No other text.`;
       const clean = text.replace(/```json|```/g, '').trim();
       result = JSON.parse(clean);
     } catch {
-      result = { fit_score: 5, fit_reason: 'Could not parse AI response', recommendation: 'maybe' };
+      result = { fit_score: 5, fit_reason: text.slice(0, 100), recommendation: 'maybe', focus_areas: [] };
     }
 
     return res.status(200).json({
@@ -98,6 +70,6 @@ Respond with JSON only. No other text.`;
     });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message, key_present: !!ANTHROPIC_KEY });
   }
 };
