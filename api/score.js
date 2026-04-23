@@ -6,24 +6,10 @@ Type: 501(c)(3) nonprofit, founded 2025
 Location: Austin, Texas (also serves online nationwide)
 Mission: Make AI education accessible to everyone and apply AI for social good
 Members: 500+ including beginners, engineers, educators, healthcare workers, students, career changers
-
-Programs:
-- AI For Everyone Workshop Series: Hands-on AI workshops, no coding required, led by PhD researchers
-- AI After Hours: In-person networking events in Austin
-- AI Innovation Challenge: Hackathons where teams build AI solutions to real-world problems
-- AI for Social Good: Building AI tools for anti-trafficking nonprofits
-- Chai Chat Mentorship: Free 1:1 AI mentorship platform (coming soon)
-
-Best grant fits:
-- AI / technology education
-- Workforce development and career training
-- Community development and access for underserved populations
-- STEM education
-- Social good, anti-trafficking, nonprofit capacity building
-- Diversity and inclusion in tech
-
+Programs: AI For Everyone Workshop Series, AI After Hours networking, AI Innovation Challenge hackathons, AI for Social Good (anti-trafficking tools), Chai Chat Mentorship
+Best grant fits: AI/technology education, workforce development, community development, STEM education, social good/anti-trafficking, diversity in tech
 Typical grant size: $5,000 - $100,000
-Geographic focus: Austin TX, Greater Austin area, Texas, nationwide (for online programs)
+Geographic focus: Austin TX, Greater Austin, Texas, nationwide (online programs)
 `;
 
 module.exports = async function handler(req, res) {
@@ -32,24 +18,25 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
   try {
-    const body = await new Promise((resolve) => {
-      let b = '';
-      req.on('data', chunk => { b += chunk.toString(); });
-      req.on('end', () => { try { resolve(JSON.parse(b)); } catch { resolve({}); } });
-    });
+    let title, description, funder, deadline, amount, source;
 
-    const { title, description, funder, deadline, amount, source } = body;
+    if (req.method === 'GET') {
+      ({ title, description, funder, deadline, amount, source } = req.query);
+    } else {
+      const body = await new Promise((resolve) => {
+        let b = '';
+        req.on('data', chunk => { b += chunk.toString(); });
+        req.on('end', () => { try { resolve(JSON.parse(b)); } catch { resolve({}); } });
+      });
+      ({ title, description, funder, deadline, amount, source } = body);
+    }
 
     if (!title && !description) {
       return res.status(400).json({ error: 'title or description required' });
     }
 
-    const prompt = `You are a grant fit evaluator for a nonprofit organization. 
+    const prompt = `You are a grant fit evaluator for a nonprofit organization.
 
 Here is the organization profile:
 ${ORG_PROFILE}
@@ -72,11 +59,11 @@ Evaluate how well this grant fits the organization. Respond in JSON only with th
 }
 
 Scoring guide:
-9-10: Perfect fit — mission, geography, programs align exactly
-7-8: Strong fit — most criteria match
-5-6: Partial fit — some alignment but notable gaps
-3-4: Weak fit — minor relevance only
-1-2: No fit — different mission or ineligible
+9-10: Perfect fit
+7-8: Strong fit
+5-6: Partial fit
+3-4: Weak fit
+1-2: No fit
 
 Respond with JSON only. No other text.`;
 
@@ -99,9 +86,10 @@ Respond with JSON only. No other text.`;
 
     let result;
     try {
-      result = JSON.parse(text);
+      const clean = text.replace(/```json|```/g, '').trim();
+      result = JSON.parse(clean);
     } catch {
-      result = { fit_score: 0, fit_reason: 'Could not parse AI response', recommendation: 'skip' };
+      result = { fit_score: 5, fit_reason: 'Could not parse AI response', recommendation: 'maybe' };
     }
 
     return res.status(200).json({
