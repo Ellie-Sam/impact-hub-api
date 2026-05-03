@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Austin AI Hub — Grant Discovery</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a18; min-height: 100vh; padding: 2rem 1rem; }
+  .container { max-width: 900px; margin: 0 auto; }
+  .header { margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; }
+  .header-left h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .header-left p { font-size: 13px; color: #5f5e5a; }
+  .badge { display: inline-block; background: #e1f5ee; color: #0f6e56; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-left: 8px; vertical-align: middle; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .stat { background: white; border-radius: 10px; border: 0.5px solid #e0dfd7; padding: 14px; text-align: center; }
+  .stat-num { font-size: 24px; font-weight: 600; color: #1a1a18; margin-bottom: 2px; }
+  .stat-lbl { font-size: 11px; color: #888780; }
+  .add-card { background: white; border-radius: 12px; border: 0.5px solid #e0dfd7; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .add-card h2 { font-size: 13px; font-weight: 600; color: #888780; letter-spacing: .05em; margin-bottom: 1rem; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
+  .form-grid-wide { grid-column: 1 / -1; }
+  label { font-size: 11px; font-weight: 600; color: #888780; display: block; margin-bottom: 4px; letter-spacing: .04em; }
+  input, select, textarea { width: 100%; padding: 8px 12px; border: 0.5px solid #d3d1c7; border-radius: 8px; font-size: 13px; background: white; color: #1a1a18; outline: none; font-family: inherit; }
+  input:focus, select:focus, textarea:focus { border-color: #534ab7; box-shadow: 0 0 0 3px #eeedfe; }
+  textarea { resize: vertical; min-height: 80px; }
+  .btn-row { display: flex; gap: 8px; }
+  button { padding: 9px 18px; border-radius: 8px; border: 0.5px solid #d3d1c7; background: white; color: #1a1a18; font-size: 13px; cursor: pointer; font-weight: 500; font-family: inherit; transition: all .15s; }
+  button:hover { background: #f5f5f3; }
+  button.primary { background: #534ab7; border-color: #534ab7; color: white; }
+  button.primary:hover { background: #3c3489; }
+  button.approve { background: #0f6e56; border-color: #0f6e56; color: white; font-size: 12px; padding: 7px 14px; }
+  button.approve:hover { background: #085041; }
+  button.dismiss { background: #fcebeb; border-color: #e24b4a; color: #a32d2d; font-size: 12px; padding: 7px 14px; }
+  button.dismiss:hover { background: #f7c1c1; }
+  button.maybe-btn { background: #faeeda; border-color: #ba7517; color: #633806; font-size: 12px; padding: 7px 14px; }
+  button.maybe-btn:hover { background: #fac775; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .filter-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+  .filter-btn { padding: 6px 14px; border-radius: 20px; font-size: 12px; border: 0.5px solid #d3d1c7; background: white; cursor: pointer; color: #5f5e5a; }
+  .filter-btn.active { background: #534ab7; border-color: #534ab7; color: white; }
+  .opportunities { display: flex; flex-direction: column; gap: 12px; }
+  .opp-card { background: white; border-radius: 12px; border: 0.5px solid #e0dfd7; padding: 1.25rem; transition: border-color .15s; }
+  .opp-card.approved { border-color: #0f6e56; background: #fafffe; }
+  .opp-card.dismissed { opacity: 0.5; }
+  .opp-card.maybe { border-color: #ba7517; background: #fffdf8; }
+  .opp-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 10px; }
+  .opp-title { font-size: 15px; font-weight: 600; color: #1a1a18; margin-bottom: 3px; }
+  .opp-funder { font-size: 12px; color: #5f5e5a; }
+  .score-badge { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; font-size: 18px; font-weight: 700; flex-shrink: 0; }
+  .score-high { background: #e1f5ee; color: #0f6e56; }
+  .score-mid { background: #faeeda; color: #854f0b; }
+  .score-low { background: #fcebeb; color: #a32d2d; }
+  .opp-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .meta-pill { background: #f5f5f3; border-radius: 20px; padding: 3px 10px; font-size: 11px; color: #5f5e5a; }
+  .meta-pill.source { background: #eeedfe; color: #534ab7; }
+  .opp-reason { font-size: 13px; color: #5f5e5a; line-height: 1.6; margin-bottom: 12px; background: #f5f5f3; border-radius: 8px; padding: 10px 12px; }
+  .opp-actions { display: flex; gap: 8px; align-items: center; }
+  .opp-status { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+  .status-approved { background: #e1f5ee; color: #0f6e56; }
+  .status-dismissed { background: #f5f5f3; color: #888780; }
+  .status-maybe { background: #faeeda; color: #854f0b; }
+  .status-pending { background: #eeedfe; color: #534ab7; }
+  .empty { text-align: center; padding: 3rem; color: #888780; font-size: 13px; }
+  .scoring-indicator { font-size: 12px; color: #534ab7; display: flex; align-items: center; gap: 6px; }
+  .dot-pulse { width: 8px; height: 8px; border-radius: 50%; background: #534ab7; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .tag { display: inline-block; background: #eeedfe; color: #534ab7; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-right: 4px; }
+  @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } .stats-row { grid-template-columns: repeat(2,1fr); } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-left">
+      <h1>Grant Discovery <span class="badge">AI-powered</span></h1>
+      <p>Review AI-scored grant opportunities for Austin AI Hub — approve to add to Airtable</p>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat"><div class="stat-num" id="s-total">0</div><div class="stat-lbl">Total reviewed</div></div>
+    <div class="stat"><div class="stat-num" id="s-approved">0</div><div class="stat-lbl">Approved</div></div>
+    <div class="stat"><div class="stat-num" id="s-maybe">0</div><div class="stat-lbl">Maybe</div></div>
+    <div class="stat"><div class="stat-num" id="s-avg">—</div><div class="stat-lbl">Avg fit score</div></div>
+  </div>
+
+  <div class="add-card">
+    <h2>ADD GRANT OPPORTUNITY TO SCORE</h2>
+    <div class="form-grid">
+      <div>
+        <label>Grant title *</label>
+        <input type="text" id="f-title" placeholder="e.g. Digital Equity Initiative Grant">
+      </div>
+      <div>
+        <label>Funder name *</label>
+        <input type="text" id="f-funder" placeholder="e.g. Luminary Foundation">
+      </div>
+      <div>
+        <label>Amount</label>
+        <input type="text" id="f-amount" placeholder="e.g. $25,000">
+      </div>
+      <div>
+        <label>Deadline</label>
+        <input type="date" id="f-deadline">
+      </div>
+      <div>
+        <label>Source</label>
+        <select id="f-source">
+          <option>Grants.gov</option>
+          <option>GrantWatch</option>
+          <option>Funder website</option>
+          <option>Email / newsletter</option>
+          <option>Network referral</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div>
+        <label>Funder website</label>
+        <input type="text" id="f-url" placeholder="https://...">
+      </div>
+      <div class="form-grid-wide">
+        <label>Grant description *</label>
+        <textarea id="f-desc" placeholder="Paste the grant description, eligibility requirements, and focus areas here..."></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="primary" id="score-btn" onclick="scoreGrant()">Score with AI</button>
+      <div class="scoring-indicator" id="scoring-indicator" style="display:none">
+        <div class="dot-pulse"></div> AI is scoring this opportunity...
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <span style="font-size:12px;color:#888780;font-weight:500">Filter:</span>
+    <button class="filter-btn active" onclick="filterOpps('all', this)">All</button>
+    <button class="filter-btn" onclick="filterOpps('pending', this)">Pending</button>
+    <button class="filter-btn" onclick="filterOpps('approved', this)">Approved</button>
+    <button class="filter-btn" onclick="filterOpps('maybe', this)">Maybe</button>
+    <button class="filter-btn" onclick="filterOpps('dismissed', this)">Dismissed</button>
+  </div>
+
+  <div class="opportunities" id="opps-list">
+    <div class="empty" id="empty-state">No opportunities scored yet. Add one above to get started.</div>
+  </div>
+
+</div>
+
+<script>
+const SCORE_URL = 'https://impact-hub-api.vercel.app/api/score';
+
+
+
+let opportunities = JSON.parse(localStorage.getItem('grant_opps') || '[]');
+let currentFilter = 'all';
+
+function save() {
+  localStorage.setItem('grant_opps', JSON.stringify(opportunities));
+  updateStats();
+  renderOpps();
+}
+
+function updateStats() {
+  const approved = opportunities.filter(o => o.status === 'approved').length;
+  const maybe = opportunities.filter(o => o.status === 'maybe').length;
+  const scores = opportunities.map(o => o.fit_score).filter(Boolean);
+  const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*10)/10 : '—';
+  document.getElementById('s-total').textContent = opportunities.length;
+  document.getElementById('s-approved').textContent = approved;
+  document.getElementById('s-maybe').textContent = maybe;
+  document.getElementById('s-avg').textContent = avg;
+}
+
+function scoreClass(score) {
+  if (score >= 7) return 'score-high';
+  if (score >= 5) return 'score-mid';
+  return 'score-low';
+}
+
+function renderOpps() {
+  const list = document.getElementById('opps-list');
+  const empty = document.getElementById('empty-state');
+  const filtered = currentFilter === 'all' ? opportunities : opportunities.filter(o => o.status === currentFilter);
+
+  if (filtered.length === 0) {
+    empty.style.display = 'block';
+    empty.textContent = currentFilter === 'all' ? 'No opportunities scored yet. Add one above to get started.' : 'No opportunities in this category yet.';
+    list.querySelectorAll('.opp-card').forEach(c => c.remove());
+    return;
+  }
+  empty.style.display = 'none';
+  list.querySelectorAll('.opp-card').forEach(c => c.remove());
+
+  filtered.slice().reverse().forEach(opp => {
+    const card = document.createElement('div');
+    card.className = `opp-card ${opp.status || 'pending'}`;
+    card.id = `opp-${opp.id}`;
+
+    const scoreNum = opp.fit_score || '?';
+    const sClass = scoreClass(opp.fit_score);
+    const tags = (opp.focus_areas || []).map(t => `<span class="tag">${t}</span>`).join('');
+    const statusLabel = { approved: 'Approved ✓', dismissed: 'Dismissed', maybe: 'Maybe', pending: 'Pending review' }[opp.status || 'pending'];
+    const statusClass = `status-${opp.status || 'pending'}`;
+    const deadlineStr = opp.deadline ? new Date(opp.deadline).toLocaleDateString() : 'No deadline';
+    const daysLeft = opp.deadline ? Math.ceil((new Date(opp.deadline) - new Date()) / 864e5) : null;
+    const urgency = daysLeft !== null && daysLeft <= 30 ? ` · ⚠ ${daysLeft} days left` : '';
+
+    card.innerHTML = `
+      <div class="opp-header">
+        <div>
+          <div class="opp-title">${opp.title}</div>
+          <div class="opp-funder">${opp.funder || 'Unknown funder'}</div>
+        </div>
+        <div class="score-badge ${sClass}">${scoreNum}</div>
+      </div>
+      <div class="opp-meta">
+        <span class="meta-pill source">${opp.source || 'Unknown source'}</span>
+        <span class="meta-pill">📅 ${deadlineStr}${urgency}</span>
+        ${opp.amount ? `<span class="meta-pill">💰 ${opp.amount}</span>` : ''}
+        ${tags}
+      </div>
+      <div class="opp-reason">${opp.fit_reason || 'No reason provided'}</div>
+      ${opp.key_requirements ? `<div style="font-size:12px;color:#888780;margin-bottom:10px">📋 ${opp.key_requirements}</div>` : ''}
+      <div class="opp-actions">
+        ${opp.status !== 'approved' ? `<button class="approve" onclick="setStatus('${opp.id}', 'approved')">✓ Approve</button>` : ''}
+        ${opp.status !== 'maybe' ? `<button class="maybe-btn" onclick="setStatus('${opp.id}', 'maybe')">Maybe</button>` : ''}
+        ${opp.status !== 'dismissed' ? `<button class="dismiss" onclick="setStatus('${opp.id}', 'dismissed')">✕ Dismiss</button>` : ''}
+        <span class="opp-status ${statusClass}">${statusLabel}</span>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function filterOpps(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOpps();
+}
+
+async function setStatus(id, status) {
+  const opp = opportunities.find(o => o.id === id);
+  if (!opp) return;
+  opp.status = status;
+
+  if (status === 'approved') {
+    await pushToAirtable(opp);
+  }
+  save();
+}
+
+async function pushToAirtable(opp) {
+  try {
+    const fields = {
+      funder_name: opp.funder || opp.title,
+      status: 'Prospecting',
+      focus_areas: (opp.focus_areas || []).join(', '),
+      eligibility_notes: opp.key_requirements || '',
+      funder_website: opp.url || '',
+    };
+    if (opp.deadline) fields.deadline = opp.deadline;
+    if (opp.amount) {
+      const num = parseInt(opp.amount.replace(/[^0-9]/g, ''));
+      if (!isNaN(num)) fields.funding_requested = num;
+    }
+
+    await fetch(`https://api.airtable.com/v0/${BASE_ID}/Grants`, {
+
+      headers: {
+        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ fields })
+    });
+    console.log('Pushed to Airtable:', opp.title);
+  } catch(e) {
+    console.error('Airtable push failed:', e.message);
+  }
+}
+
+async function scoreGrant() {
+  const title = document.getElementById('f-title').value.trim();
+  const description = document.getElementById('f-desc').value.trim();
+  if (!title || !description) {
+    alert('Please fill in at least the title and description.');
+    return;
+  }
+
+  const btn = document.getElementById('score-btn');
+  btn.disabled = true;
+  document.getElementById('scoring-indicator').style.display = 'flex';
+
+  const payload = {
+    title,
+    funder: document.getElementById('f-funder').value.trim(),
+    amount: document.getElementById('f-amount').value.trim(),
+    deadline: document.getElementById('f-deadline').value,
+    source: document.getElementById('f-source').value,
+    description
+  };
+
+  try {
+    const params = new URLSearchParams({ title, funder: payload.funder, amount: payload.amount, deadline: payload.deadline, source: payload.source, description });
+    const res = await fetch(SCORE_URL + "?" + params.toString(), {
+
+
+
+    });
+    const data = await res.json();
+
+    const opp = {
+      id: Date.now().toString(),
+      title,
+      funder: payload.funder,
+      amount: payload.amount,
+      deadline: payload.deadline,
+      source: payload.source,
+      url: document.getElementById('f-url').value.trim(),
+      description,
+      fit_score: data.fit_score,
+      fit_reason: data.fit_reason,
+      focus_areas: data.focus_areas || [],
+      key_requirements: data.key_requirements,
+      recommendation: data.recommendation,
+      status: 'pending',
+      scored_at: new Date().toISOString()
+    };
+
+    opportunities.push(opp);
+    save();
+
+    document.getElementById('f-title').value = '';
+    document.getElementById('f-funder').value = '';
+    document.getElementById('f-amount').value = '';
+    document.getElementById('f-deadline').value = '';
+    document.getElementById('f-desc').value = '';
+    document.getElementById('f-url').value = '';
+
+  } catch(e) {
+    alert('Scoring failed: ' + e.message);
+  }
+
+  btn.disabled = false;
+  document.getElementById('scoring-indicator').style.display = 'none';
+}
+
+updateStats();
+renderOpps();
+</script>
+</body>
+</html>
