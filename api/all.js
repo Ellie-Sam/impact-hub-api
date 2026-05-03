@@ -27,10 +27,11 @@ module.exports = async function handler(req, res) {
   if (req.method === 'POST') {
     try {
       const body = await readBody(req);
+      console.log('POST body received:', JSON.stringify(body));
 
       if (body.action === 'approve_grant') {
         const { funder_name, deadline, amount, focus_areas, key_requirements, url: funderUrl, source } = body;
-        
+
         const fields = {
           funder_name: funder_name || 'Unknown',
           status: 'Prospecting',
@@ -39,13 +40,15 @@ module.exports = async function handler(req, res) {
           eligibility_notes: key_requirements || '',
           funder_website: funderUrl || '',
         };
-        
+
         if (deadline) fields.deadline = deadline;
-        
+
         if (amount) {
           const num = parseInt(String(amount).replace(/[^0-9]/g, ''));
           if (!isNaN(num)) fields.funding_requested = num;
         }
+
+        console.log('Sending to Airtable:', JSON.stringify(fields));
 
         const atRes = await fetch(`https://api.airtable.com/v0/${BASE_ID}/Grants`, {
           method: 'POST',
@@ -56,6 +59,8 @@ module.exports = async function handler(req, res) {
           body: JSON.stringify({ fields })
         });
         const atData = await atRes.json();
+        console.log('Airtable response:', JSON.stringify(atData));
+
         if (atData.error) return res.status(400).json({ error: atData.error, detail: atData });
         return res.status(200).json({ success: true, record_id: atData.id });
       }
@@ -84,6 +89,7 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Unknown action' });
 
     } catch (err) {
+      console.log('Error:', err.message);
       return res.status(500).json({ error: err.message });
     }
   }
