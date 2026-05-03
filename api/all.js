@@ -28,17 +28,20 @@ module.exports = async function handler(req, res) {
     try {
       const body = await readBody(req);
 
-      // Handle approve grant → create Airtable record
       if (body.action === 'approve_grant') {
-        const { funder_name, deadline, amount, focus_areas, key_requirements, url: funderUrl, fit_score } = body;
+        const { funder_name, deadline, amount, focus_areas, key_requirements, url: funderUrl, source } = body;
+        
         const fields = {
           funder_name: funder_name || 'Unknown',
           status: 'Prospecting',
+          source_platform: source || 'Grant Discovery Agent',
           focus_areas: Array.isArray(focus_areas) ? focus_areas.join(', ') : (focus_areas || ''),
           eligibility_notes: key_requirements || '',
           funder_website: funderUrl || '',
         };
+        
         if (deadline) fields.deadline = deadline;
+        
         if (amount) {
           const num = parseInt(String(amount).replace(/[^0-9]/g, ''));
           if (!isNaN(num)) fields.funding_requested = num;
@@ -53,11 +56,10 @@ module.exports = async function handler(req, res) {
           body: JSON.stringify({ fields })
         });
         const atData = await atRes.json();
-        if (atData.error) return res.status(400).json({ error: atData.error });
+        if (atData.error) return res.status(400).json({ error: atData.error, detail: atData });
         return res.status(200).json({ success: true, record_id: atData.id });
       }
 
-      // Handle generate narrative
       if (body.action === 'generate_narrative' || body.prompt) {
         const prompt = body.prompt || '';
         const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -86,7 +88,6 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // GET — fetch all tables
   try {
     const results = await Promise.allSettled(TABLES.map(t => fetchTable(t)));
     const data = {};
